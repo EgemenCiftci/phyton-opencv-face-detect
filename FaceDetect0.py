@@ -1,7 +1,7 @@
 import cv2 as cv
 
 
-def detect(img, cascade):
+def detect(img, cascade) -> list:
     rects = cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=4, minSize=(30, 30),
                                      flags=cv.CASCADE_SCALE_IMAGE)
     if len(rects) == 0:
@@ -16,28 +16,28 @@ def draw_rects(img, rects, color):
 
 
 def main():
-    import sys
-    import getopt
+    import argparse
 
-    args, video_src = getopt.getopt(
-        sys.argv[1:], '', ['cascade=', 'nested-cascade='])
-    try:
-        video_src = video_src[0]
-    except:
-        video_src = 0
-    args = dict(args)
-    cascade_fn = args.get(
-        '--cascade', "haarcascades/haarcascade_frontalface_alt.xml")
-    nested_fn = args.get('--nested-cascade',
-                         "haarcascades/haarcascade_eye.xml")
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--cascade', default="haarcascades/haarcascade_frontalface_alt.xml")
+    parser.add_argument('--nested-cascade',
+                        default="haarcascades/haarcascade_eye.xml")
+    parser.add_argument('--video-src', type=int, default=0)
+    args = parser.parse_args()
+
+    cascade_fn = args.cascade
+    nested_fn = args.nested_cascade
 
     cascade = cv.CascadeClassifier(cv.samples.findFile(cascade_fn))
     nested = cv.CascadeClassifier(cv.samples.findFile(nested_fn))
 
-    cam = cv.VideoCapture(video_src)
+    cam = cv.VideoCapture(args.video_src)
 
     while True:
         _ret, img = cam.read()
+        if not _ret:
+            break
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         gray = cv.equalizeHist(gray)
         rects = detect(gray, cascade)
@@ -50,15 +50,16 @@ def main():
                 subrects = detect(roi.copy(), nested)
                 draw_rects(vis_roi, subrects, (255, 0, 0))
 
-        cv.imshow('facedetect', vis)
+        cv.imshow('Face Detection', vis)
 
+        # Close the program when the user presses 'Esc'
         if cv.waitKey(5) == 27:
             break
 
     print('Done')
+    cv.destroyAllWindows()
 
 
 if __name__ == '__main__':
     print(__doc__)
     main()
-    cv.destroyAllWindows()
